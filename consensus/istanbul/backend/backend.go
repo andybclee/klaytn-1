@@ -229,13 +229,17 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(valSet istanbul.ValidatorSet) map[common.Address]bool {
+func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
+	view := sb.currentView.Load().(*istanbul.View)
 
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
+	for i := 0; i < 2; i++ {
+		for _, val := range valSet.SubList(prevHash, view) {
+			if val.Address() != sb.Address() {
+				targets[val.Address()] = true
+			}
 		}
+		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
 	return targets
 }
@@ -249,7 +253,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := sb.getTargetReceivers(valSet)
+	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
