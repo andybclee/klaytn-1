@@ -241,6 +241,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
+	view.Round = view.Round.Sub(view.Round, common.Big2)
 	return targets
 }
 
