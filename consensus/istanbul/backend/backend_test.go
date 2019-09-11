@@ -275,8 +275,10 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 // Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
 func Test_GossipSubPeerTargets(t *testing.T) {
 	// Create ValidatorSet
-	council := getTestCouncil()
-	rewards := getTestRewards()
+	council := getTestCouncil() //[:50]
+	fmt.Printf("Council Size: %d\n", len(council))
+
+	rewards := getTestRewards() //[:50]
 
 	// get testing node's address
 	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
@@ -318,7 +320,7 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 
 			// use max int64 + block number. In SubList() only left 15 bytes are being used to shuffle.
 			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
-			prevHash := common.HexToHash(hex) //common.BigToHash(big.NewInt (9223372036854775807 + i))
+			prevHash := common.HexToHash(hex)
 
 			// current and next committee
 			committees := make([][]istanbul.Validator, 2)
@@ -335,7 +337,7 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 			backend.currentView.Store(viewCurrent)
 
 			targets := backend.GossipSubPeer(prevHash, valSet, nil)
-
+			fmt.Printf("Block: %d, Round: %d, Proposer: %v, Target Size: %d\n", i, round, valSet.GetProposer().String(), len(targets))
 			// Check if the testing node is in a committee
 			if !backend.checkInSubList(prevHash, valSet) {
 				continue
