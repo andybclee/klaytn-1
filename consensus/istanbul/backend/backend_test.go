@@ -330,10 +330,13 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 
 			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
 			backend.currentView.Store(viewCurrent)
+
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round+1))
 			committees[1] = valSet.SubList(prevHash, viewCurrent)
 
 			// Reduce round by 1 to set round to the current round before calling GossipSubPeer
 			viewCurrent.Round = viewCurrent.Round.Sub(viewCurrent.Round, common.Big1)
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
 			backend.currentView.Store(viewCurrent)
 
 			targets := backend.GossipSubPeer(prevHash, valSet, nil)
