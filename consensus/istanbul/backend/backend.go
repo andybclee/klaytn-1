@@ -260,8 +260,11 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
+	logger.Error("Check committee", "proposer", valSet.GetProposer().Address().String(), "block", sb.currentView.Load().(*istanbul.View).Sequence, "round", sb.currentView.Load().(*istanbul.View).Round, "committee", valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)))
 
 	targets := sb.getTargetReceivers(prevHash, valSet)
+
+	logger.Error("Check committee - after getTarget", "proposer", valSet.GetProposer().Address().String(), "block", sb.currentView.Load().(*istanbul.View).Sequence, "round", sb.currentView.Load().(*istanbul.View).Round, "committee", valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)))
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
