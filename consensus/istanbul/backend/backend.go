@@ -233,13 +233,20 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	targets := make(map[common.Address]bool)
 	view := sb.currentView.Load().(*istanbul.View)
 
+	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
-		for _, val := range valSet.SubList(prevHash, view) {
+		vals := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		for _, val := range vals {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true
 			}
 		}
+		// Check if there is only 1 node in a committee
+		if len(vals) > 1 {
+			proposer = vals[1]
+		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
+
 	}
 	view.Round = view.Round.Sub(view.Round, common.Big2)
 	return targets
