@@ -212,6 +212,6 @@ func (c *core) handleTimeoutMsg() {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
-		c.sendNextRoundChange("handleTimeoutMsg. lastProposal is nil or lastProposal's number is smaller than current sequence")
+		c.sendNextRoundChange("[RC] handleTimeoutMsg. lastProposal is nil or lastProposal's number is smaller than current sequence")
 	}
 }

@@ -21,6 +21,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -102,7 +103,8 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				})
 			})
 		} else {
-			c.sendNextRoundChange("handlePreprepare. Proposal verification failure. Not ErrFutureBlock")
+			buf := fmt.Sprintf("[RC] handlePreprepare. Proposal verification failure. err: %v", err)
+			c.sendNextRoundChange(buf)
 		}
 		return err
 	}
@@ -121,7 +123,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				c.sendCommit()
 			} else {
 				// Send round change
-				c.sendNextRoundChange("handlePrepare. HashLocked, but received hash is different from locked hash")
+				c.sendNextRoundChange("[RC] handlePrepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
 			// Either
