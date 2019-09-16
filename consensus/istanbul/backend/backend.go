@@ -265,6 +265,8 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
+		receiverCount := len(ps)
+		var actualReceiverCount int
 		for addr, p := range ps {
 			ms, ok := sb.recentMessages.Get(addr)
 			var m *lru.ARCCache
@@ -285,9 +287,10 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 				PrevHash: prevHash,
 				Payload:  payload,
 			}
-
+			actualReceiverCount++
 			go p.Send(IstanbulMsg, cmsg)
 		}
+		logger.Info("Gossipping SubPeer", "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
 	}
 	return targets
 }
