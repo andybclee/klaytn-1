@@ -52,6 +52,8 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			Msg:  preprepare,
 		})
 		logger.Info("Broadcasted preprepare", "address", c.backend.Address(), "sequence", c.currentView().Sequence.Uint64(), "round", c.currentView().Round.Uint64())
+	} else {
+
 	}
 }
 

@@ -267,21 +267,21 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 		ps := sb.broadcaster.FindCNPeers(targets)
 		receiverCount := len(ps)
 		var actualReceiverCount int
-		for addr, p := range ps {
-			ms, ok := sb.recentMessages.Get(addr)
-			var m *lru.ARCCache
-			if ok {
-				m, _ = ms.(*lru.ARCCache)
-				if _, k := m.Get(hash); k {
-					// This peer had this event, skip it
-					continue
-				}
-			} else {
-				m, _ = lru.NewARC(inmemoryMessages)
-			}
-
-			m.Add(hash, true)
-			sb.recentMessages.Add(addr, m)
+		for _, p := range ps {
+			//ms, ok := sb.recentMessages.Get(addr)
+			//var m *lru.ARCCache
+			//if ok {
+			//	m, _ = ms.(*lru.ARCCache)
+			//	if _, k := m.Get(hash); k {
+			//		// This peer had this event, skip it
+			//		continue
+			//	}
+			//} else {
+			//	m, _ = lru.NewARC(inmemoryMessages)
+			//}
+			//
+			//m.Add(hash, true)
+			//sb.recentMessages.Add(addr, m)
 
 			cmsg := &istanbul.ConsensusMsg{
 				PrevHash: prevHash,
