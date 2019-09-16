@@ -187,14 +187,14 @@ func (c *core) commit() {
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
-			c.sendNextRoundChange("commit failure")
+			c.sendNextRoundChange("[RC] Commit failure")
 			return
 		}
 	} else {
 		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
 		c.current.UnlockHash() //Unlock block when insertion fails
-		c.sendNextRoundChange("commit failure. proposal is nil")
+		c.sendNextRoundChange("[RC] commit failure. Proposal is nil")
 		return
 	}
 }

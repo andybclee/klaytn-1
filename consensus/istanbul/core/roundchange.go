@@ -118,7 +118,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
 		// We've received enough ROUND CHANGE messages, start a new round immediately.
-		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
+		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round", "sequence", roundView.Sequence, "round", roundView.Round)
 		c.startNewRound(roundView.Round)
 		return nil
 	} else if c.waitingForRoundChange && num == numCatchUp {
@@ -126,13 +126,13 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		// If our round number is smaller than the certificate's round number, we would
 		// try to catch up the round number.
 		if cv.Round.Cmp(roundView.Round) < 0 {
-			logger.Warn("[RC] Send round change because we have F+1 roundchange messages")
+			logger.Warn("[RC] Send round change because we have F+1 roundchange messages", "sequence", roundView.Sequence, "round", roundView.Round)
 			c.sendRoundChange(roundView.Round)
 		}
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other validators.
-		logger.Warn("[RC] Received round is bigger but not enough number of messages. Message ignored")
+		logger.Warn("[RC] Received round is bigger but not enough number of messages. Message ignored", "sequence", roundView.Sequence, "round", roundView.Round)
 		return errIgnored
 	}
 	return nil
