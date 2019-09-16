@@ -33,9 +33,9 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 
 	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
 	request.Proposal = request.Proposal.WithSeal(header)
-	logger.Info("I AM THE PROPOSER", "address", c.backend.Address(), "sequence", c.currentView().Sequence.Uint64(), "round", c.currentView().Round.Uint64())
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
+		logger.Info("I AM THE PROPOSER", "address", c.backend.Address(), "sequence", c.currentView().Sequence.Uint64(), "round", c.currentView().Round.Uint64())
 		curView := c.currentView()
 		preprepare, err := Encode(&istanbul.Preprepare{
 			View:     curView,
