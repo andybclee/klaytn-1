@@ -21,6 +21,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/node"
@@ -212,6 +213,7 @@ func (c *core) handleTimeoutMsg() {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
-		c.sendNextRoundChange("[RC] handleTimeoutMsg. lastProposal is nil or lastProposal's number is smaller than current sequence")
+		buf := fmt.Sprintf("[RC] handleTimeoutMsg. lastProposal == nil: %v, lastProposal sequence: %d, current sequence: %d", lastProposal == nil, lastProposal.Number().Uint64(), c.current.Sequence())
+		c.sendNextRoundChange(buf)
 	}
 }

@@ -386,12 +386,16 @@ func (c *core) newRoundChangeTimer() {
 			if commitsSize > 0 {
 				logger.Warn("[RC] Commits:", "messages", c.current.Commits.GetMessages())
 			}
+			logger.Warn("[RC] Received Roundchanges")
+			for k, v := range c.roundChangeSet.roundChanges {
+				logger.Warn("Round and message count", "round", k, "count", v.Size())
+			}
 		}
 
 		c.sendEvent(timeoutEvent{})
 	}))
 
-	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)
+	logger.Debug("[RC] New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
