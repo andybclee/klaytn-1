@@ -380,7 +380,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		logger.Debug("### subList", "prevHash", prevHash.Hex())
 	}
 
-	logger.Trace("New committee", "valSet.Number", valSet.blockNum, "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
+	logger.Debug("New committee", "valSet.Number", valSet.blockNum, "round", view.Round.Uint64(), "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
 	return committee
 }
 
