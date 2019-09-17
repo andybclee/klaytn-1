@@ -300,7 +300,8 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			}
 			//return err
 		}
-		logger.Info("Gossipping SubPeer", "msg type", msg.Code, "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
+		view := sb.currentView.Load().(*istanbul.View)
+		logger.Debug("Gossipping SubPeer", "msg type", msg.Code, "seq", view.Sequence.String(), "round", view.Round.String(), "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
 	}
 	return targets
 }
