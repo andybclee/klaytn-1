@@ -22,6 +22,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -387,9 +388,14 @@ func (c *core) newRoundChangeTimer() {
 				logger.Warn("[RC] Commits:", "messages", c.current.Commits.GetMessages())
 			}
 			logger.Warn("[RC] Received Roundchanges")
+
+			var buf bytes.Buffer
+			buf.WriteString("Round and message count : ")
 			for k, v := range c.roundChangeSet.roundChanges {
-				logger.Warn("Round and message count", "round", k, "count", v.Size())
+				temp := fmt.Sprintf("round %d, count %d / ", k, v.Size())
+				buf.WriteString(temp)
 			}
+			logger.Warn(buf.String())
 		}
 
 		c.sendEvent(timeoutEvent{})
