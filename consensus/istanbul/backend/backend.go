@@ -22,6 +22,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -35,8 +36,10 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
 	"sync"
@@ -289,10 +292,75 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			actualReceiverCount++
 			go p.Send(IstanbulMsg, cmsg)
 		}
-		logger.Info("Gossipping SubPeer", "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
+
+		msg := new(message)
+		if err := msg.FromPayload(payload, nil); err != nil {
+			if sb.NodeType() == node.CONSENSUSNODE {
+				logger.Error("Failed to decode message from payload", "err", err)
+			}
+			//return err
+		}
+		logger.Info("Gossipping SubPeer", "msg type", msg.Code, "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
 	}
 	return targets
 }
+
+//============================================================================================
+// ToDo-Klaytn-consesus remove this struct after debugging
+type message struct {
+	Hash          common.Hash
+	Code          uint64
+	Msg           []byte
+	Address       common.Address
+	Signature     []byte
+	CommittedSeal []byte
+}
+
+func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
+	// Decode message
+	err := rlp.DecodeBytes(b, &m)
+	if err != nil {
+		return err
+	}
+
+	// Validate message (on a message without Signature)
+	if validateFn != nil {
+		var payload []byte
+		payload, err = m.PayloadNoSig()
+		if err != nil {
+			return err
+		}
+
+		_, err = validateFn(payload, m.Signature)
+	}
+	// Still return the message even the err is not nil
+	return err
+}
+
+func (m *message) Payload() ([]byte, error) {
+	return rlp.EncodeToBytes(m)
+}
+
+func (m *message) PayloadNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&message{
+		Hash:          m.Hash,
+		Code:          m.Code,
+		Msg:           m.Msg,
+		Address:       m.Address,
+		Signature:     []byte{},
+		CommittedSeal: m.CommittedSeal,
+	})
+}
+
+func (m *message) Decode(val interface{}) error {
+	return rlp.DecodeBytes(m.Msg, val)
+}
+
+func (m *message) String() string {
+	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Address.String())
+}
+
+//============================================================================================
 
 // Commit implements istanbul.Backend.Commit
 func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
