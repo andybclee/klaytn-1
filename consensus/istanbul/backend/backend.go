@@ -234,7 +234,13 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
-	view := sb.currentView.Load().(*istanbul.View)
+
+	r := sb.currentView.Load().(*istanbul.View).Round.Int64()
+	s := sb.currentView.Load().(*istanbul.View).Sequence.Int64()
+	view := &istanbul.View{
+		Round:    big.NewInt(r),
+		Sequence: big.NewInt(s),
+	}
 
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
@@ -250,7 +256,6 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
-	view.Round = view.Round.Sub(view.Round, common.Big2)
 	return targets
 }
 
