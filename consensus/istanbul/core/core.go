@@ -177,7 +177,7 @@ func (c *core) isProposer() bool {
 
 func (c *core) commit() {
 	c.setState(StateCommitted)
-	logger.Debug("Set state to Committed")
+	logger.Debug("Set state to Committed", "seq", c.currentView().Sequence.String(), "round", c.currentView().Round.String())
 
 	proposal := c.current.Proposal()
 	if proposal != nil {

@@ -70,7 +70,7 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 		c.state.Cmp(StatePrepared) < 0 {
 		c.current.LockHash()
 		c.setState(StatePrepared)
-		logger.Debug("Set state to Prepared")
+		logger.Debug("Set state to Prepared", "seq", c.currentView().Sequence.String(), "round", c.currentView().Round.String())
 
 		c.sendCommit()
 	}
