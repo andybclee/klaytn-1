@@ -309,6 +309,13 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			3: "Roundchange",
 		}
 		logger.Debug("Gossipping SubPeer", "msg type", msgType[msg.Code], "seq", view.Sequence.String(), "round", view.Round.String(), "receiverCount", receiverCount, "actualReceiverCount", actualReceiverCount)
+	} else {
+		if len(targets) == 0 {
+			logger.Warn("No target to send consensus message!!!")
+		}
+		if sb.broadcaster == nil {
+			logger.Warn("Broadcaster is nil!!!")
+		}
 	}
 	return targets
 }
