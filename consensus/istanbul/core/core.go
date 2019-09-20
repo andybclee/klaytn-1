@@ -107,6 +107,8 @@ type core struct {
 
 	councilSizeGauge   metrics.Gauge
 	committeeSizeGauge metrics.Gauge
+
+	backupRound atomic.Value // uint64
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -361,7 +363,7 @@ func (c *core) newRoundChangeTimer() {
 	if round > 0 {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
 	}
-
+	c.backupRound.Store(round)
 	c.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
 		var loc, proposer string
 
@@ -376,7 +378,7 @@ func (c *core) newRoundChangeTimer() {
 			proposer = c.valSet.GetProposer().String()
 		}
 
-		if c.backend.NodeType() == node.CONSENSUSNODE {
+		if c.backend.NodeType() == node.CONSENSUSNODE && c.backupRound.Load().(uint64) == c.current.round.Uint64() {
 			// Write log messages for validator activities analysis
 			preparesSize := c.current.Prepares.Size()
 			commitsSize := c.current.Commits.Size()
