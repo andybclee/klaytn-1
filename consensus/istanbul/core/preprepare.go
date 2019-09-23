@@ -53,7 +53,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 		})
 		logger.Info("Broadcasted preprepare", "address", c.backend.Address(), "sequence", c.currentView().Sequence.Uint64(), "round", c.currentView().Round.Uint64())
 	} else {
-
+		logger.Debug("I am not the proposer", "sequence", c.currentView().Sequence.Uint64(), "round", c.currentView().Round.Uint64(), "me", c.Address(), "proposer", c.valSet.GetProposer().Address())
 	}
 }
 
