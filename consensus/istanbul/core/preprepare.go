@@ -123,6 +123,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				// Broadcast COMMIT and enters Prepared state directly
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
+				logger.Debug("Set state to Preprepared hashlocked", "seq", c.currentView().Sequence.String(), "round", c.currentView().Round.String())
 				c.sendCommit()
 			} else {
 				// Send round change

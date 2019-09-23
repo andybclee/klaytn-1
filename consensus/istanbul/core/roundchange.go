@@ -32,7 +32,7 @@ import (
 func (c *core) sendNextRoundChange(loc string) {
 	cv := c.currentView()
 	if c.backend.NodeType() == node.CONSENSUSNODE {
-		logger.Warn("[RC] sendNextRoundChange happened", "where", loc)
+		logger.Warn("[RC] sendNextRoundChange happened", "where", loc, "seq", cv.Sequence.Uint64(), "round", cv.Round.Uint64())
 	}
 	c.sendRoundChange(new(big.Int).Add(cv.Round, common.Big1))
 }
@@ -43,7 +43,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	cv := c.currentView()
 	if cv.Round.Cmp(round) >= 0 {
-		logger.Error("Cannot send out the round change", "current round", cv.Round, "target round", round)
+		logger.Error("Cannot send out the round change", "seq", cv.Sequence.Uint64(), "current round", cv.Round, "target round", round)
 		return
 	}
 

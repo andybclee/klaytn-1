@@ -164,6 +164,20 @@ func (c *core) handleMsg(payload []byte) error {
 		return istanbul.ErrUnauthorizedAddress
 	}
 
+	msgText := ""
+	switch msg.Code {
+	case msgPreprepare:
+		msgText = "Preprepare"
+	case msgPrepare:
+		msgText = "Prepare"
+	case msgCommit:
+		msgText = "Commit"
+	case msgRoundChange:
+		msgText = "Roundchange"
+	default:
+		msgText = "Unknown message"
+	}
+	logger.Debug("received a message", "msg", msgText, "from", msg.Address.String())
 	return c.handleCheckedMsg(msg, src)
 }
 
