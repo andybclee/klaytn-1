@@ -242,12 +242,15 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		Sequence: big.NewInt(s),
 	}
 
+	logger.Debug("Getting receiving targets for ", "seq", s, "round", r)
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
+		logger.Debug("Targets for current", "round", view.Round.Int64())
 		vals := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
 		for _, val := range vals {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true
+				logger.Debug("target", "addr", val.Address().String())
 			}
 		}
 		// Check if there is only 1 node in a committee
