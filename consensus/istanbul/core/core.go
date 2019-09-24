@@ -396,6 +396,10 @@ func (c *core) newRoundChangeTimer() {
 			buf.WriteString("Round and message count : ")
 			buf.WriteString("addr ")
 			buf.WriteString(c.backend.Address().String() + " ")
+
+			c.roundChangeSet.mu.Lock()
+			defer c.roundChangeSet.mu.Unlock()
+
 			for k, v := range c.roundChangeSet.roundChanges {
 				var addrList bytes.Buffer
 				for addr, _ := range v.messages {
