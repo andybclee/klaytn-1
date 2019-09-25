@@ -21,6 +21,7 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
@@ -42,6 +43,7 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -245,7 +247,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	logger.Debug("Getting receiving targets for ", "seq", s, "round", r)
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
-		logger.Debug("Targets for current", "round", view.Round.Int64())
+		logger.Debug("Sublist for ", "round", view.Round.Int64())
 		vals := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
 		for _, val := range vals {
 			if val.Address() != sb.Address() {
@@ -259,6 +261,13 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
+
+	var buf bytes.Buffer
+	buf.WriteString("Targets for seq " + strconv.Itoa(int(s)) + ", round " + strconv.Itoa(int(r)) + ": ")
+	for k, _ := range targets {
+		buf.WriteString(k.String() + " ")
+	}
+	logger.Error(buf.String())
 	return targets
 }
 
