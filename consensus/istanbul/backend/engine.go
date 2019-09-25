@@ -292,6 +292,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// copy the parent extra data as the header extra data
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
+	logger.Debug("In Prepare - check hash1", "current seq", number, "current parentHash", header.ParentHash)
+	logger.Debug("In Prepare - check hash1", "parent seq", parent.Number.Uint64(), "parent parentHash", parent.ParentHash)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
@@ -303,6 +305,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if err != nil {
 		return err
 	}
+	logger.Debug("In Prepare - check hash2 after snapshot", "current seq", number, "current parentHash", header.ParentHash)
+	logger.Debug("In Prepare - check hash2 after snapshot", "parent seq", parent.Number.Uint64(), "parent parentHash", parent.ParentHash)
 
 	// If it reaches the Epoch, governance config will be added to block header
 	if number%sb.governance.Epoch() == 0 {
@@ -319,6 +323,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 
 	// if there is a vote to attach, attach it to the header
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
+	logger.Debug("In Prepare - check hash3 before snap.committee", "current seq", number, "current parentHash", header.ParentHash)
+	logger.Debug("In Prepare - check hash3 before snap.committee", "parent seq", parent.Number.Uint64(), "parent parentHash", parent.ParentHash)
 
 	// add validators in snapshot to extraData's validators section
 	extra, err := prepareExtra(header, snap.committee(header.ParentHash, sb.currentView.Load().(*istanbul.View)))

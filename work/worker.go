@@ -500,6 +500,8 @@ func (self *worker) commitNewWork() {
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
+	logger.Debug("Check Parent hash in commitNewWork", "seq", header.Number, "ParentHash", parent.Hash())
+
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return

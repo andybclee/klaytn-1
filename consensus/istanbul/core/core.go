@@ -147,6 +147,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 }
 
 func (c *core) broadcast(msg *message) {
+	orig := msg.Hash
 	logger := c.logger.NewWith("state", c.state)
 
 	payload, err := c.finalizeMessage(msg)
@@ -155,6 +156,7 @@ func (c *core) broadcast(msg *message) {
 		return
 	}
 
+	logger.Debug("Check hash in broadcast", "orig", orig, "current", msg.Hash)
 	// Broadcast payload
 	if err = c.backend.Broadcast(msg.Hash, c.valSet, payload); err != nil {
 		logger.Error("Failed to broadcast message", "msg", msg, "err", err)

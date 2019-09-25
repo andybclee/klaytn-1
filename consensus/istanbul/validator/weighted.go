@@ -295,6 +295,8 @@ func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View
 }
 
 func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {
+	v := view.Sequence.Uint64()
+	logger.Debug("SubListWithProposer1", "seq", v, "prevHash", prevHash)
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	if uint64(len(valSet.validators)) <= valSet.subSize {
@@ -326,6 +328,8 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		logger.Debug("Sub size is 1, current", "prevHash", prevHash.Hex(), "proposer", proposer, "committee", committee, "committee size", len(committee), "subSize", valSet.subSize)
 		return committee
 	}
+	logger.Debug("SubListWithProposer2", "seq", v, "prevHash", prevHash)
+
 	// next proposer
 	nextProposerIdx := uint64(1)
 	for committee[1] == nil {
@@ -336,6 +340,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		}
 		nextProposerIdx += 1
 	}
+	logger.Debug("SubListWithProposer3", "seq", v, "prevHash", prevHash)
 
 	proposerIdx, _ := valSet.getByAddress(committee[0].Address())
 	nextproposerIdx, _ := valSet.getByAddress(committee[1].Address())
@@ -354,6 +359,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	if proposerIdx == nextproposerIdx {
 		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
 	}
+	logger.Debug("SubListWithProposer4", "seq", v, "prevHash", prevHash)
 
 	limit := len(valSet.validators)
 	picker := rand.New(rand.NewSource(seed))
@@ -375,6 +381,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	for i := uint64(0); i < valSet.subSize-2; i++ {
 		committee[i+2] = valSet.validators[indexs[i]]
 	}
+	logger.Debug("SubListWithProposer5", "seq", v, "prevHash", prevHash)
 
 	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
 		logger.Debug("### subList", "prevHash", prevHash.Hex())
