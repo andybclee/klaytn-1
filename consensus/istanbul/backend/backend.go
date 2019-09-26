@@ -523,6 +523,7 @@ func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.Valid
 func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	block := sb.currentBlock()
 
+	logger.Debug("LastProposal")
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
