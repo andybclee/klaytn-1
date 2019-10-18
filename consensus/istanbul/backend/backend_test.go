@@ -670,6 +670,57 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 	return governance.NewGovernance(config, dbm)
 }
 
+func Benchmark_GossipSubPeerTargets(b *testing.B) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	rewards := getTestRewards()
+
+	// get testing node's address
+	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+
+	recents, _ := lru.NewARC(inmemorySnapshots)
+	recentMessages, _ := lru.NewARC(inmemoryPeers)
+	knownMessages, _ := lru.NewARC(inmemoryMessages)
+	gov := getGovernance(dbm)
+	backend := &backend{
+		config:            istanbul.DefaultConfig,
+		istanbulEventMux:  new(event.TypeMux),
+		privateKey:        key,
+		address:           crypto.PubkeyToAddress(key.PublicKey),
+		logger:            logger.NewWith(),
+		db:                dbm,
+		commitCh:          make(chan *types.Result, 1),
+		recents:           recents,
+		candidates:        make(map[common.Address]bool),
+		coreStarted:       false,
+		recentMessages:    recentMessages,
+		knownMessages:     knownMessages,
+		rewardbase:        rewards[0],
+		governance:        gov,
+		GovernanceCache:   newGovernanceCache(),
+		nodetype:          p2p.CONSENSUSNODE,
+		rewardDistributor: reward.NewRewardDistributor(gov),
+	}
+	backend.core = istanbulCore.New(backend, backend.config)
+
+	// Test for blocks from 0 to maxBlockNum
+	for i := int64(0); i < maxBlockNum; i++ {
+		// Test for round 0 to round 14
+		for round := int64(0); round < 15; round++ {
+			backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(round)})
+			valSet.SetBlockNum(uint64(i))
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
+
+			// Use block number as prevHash. In SubList() only left 15 bytes are being used.
+			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
+			prevHash := common.HexToHash(hex)
+			_ = backend.GossipSubPeer(prevHash, valSet, nil)
+		}
+	}
+}
+
 // Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
 func Test_GossipSubPeerTargets(t *testing.T) {
 	// Create ValidatorSet

@@ -230,32 +230,48 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
-	targets := make(map[common.Address]bool)
-
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
-	view := &istanbul.View{
+
+	targets := make(map[common.Address]bool)
+	targetsMu := sync.RWMutex{}
+
+	committees := make([]istanbul.ValidatorSet, 2)
+	views := make([]*istanbul.View, 2)
+	committees[0] = valSet
+	committees[1] = valSet.Copy()
+
+	views[0] = &istanbul.View{
 		Round:    big.NewInt(cv.Round.Int64()),
 		Sequence: big.NewInt(cv.Sequence.Int64()),
 	}
 
-	proposer := valSet.GetProposer()
-	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
-		for _, val := range committee {
-			if val.Address() != sb.Address() {
-				targets[val.Address()] = true
-			}
-		}
-		// Don't change a proposer for the next round if there is only one node.
-		if len(committee) > 1 {
-			proposer = committee[1]
-		}
-		view.Round = view.Round.Add(view.Round, common.Big1)
+	views[1] = &istanbul.View{
+		Round:    big.NewInt(cv.Round.Int64() + 1),
+		Sequence: big.NewInt(cv.Sequence.Int64()),
 	}
+	committees[1].CalcProposer(committees[0].GetProposer().Address(), views[1].Round.Uint64())
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(index int) {
+			proposer := committees[index].GetProposer()
+			committee := committees[index].SubListWithProposer(prevHash, proposer.Address(), views[index])
+			for _, val := range committee {
+				if val.Address() != sb.Address() {
+					targetsMu.Lock()
+					targets[val.Address()] = true
+					targetsMu.Unlock()
+				}
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 	return targets
 }
 
