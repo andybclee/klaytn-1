@@ -237,41 +237,57 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	}
 
 	targets := make(map[common.Address]bool)
-	targetsMu := sync.RWMutex{}
+	//targetsMu := sync.RWMutex{}
 
-	committees := make([]istanbul.ValidatorSet, 2)
-	views := make([]*istanbul.View, 2)
-	committees[0] = valSet
-	committees[1] = valSet.Copy()
+	//wg := sync.WaitGroup{}
+	update := make(chan common.Address, 100)
+	done := make(chan struct{}, 2)
 
-	views[0] = &istanbul.View{
-		Round:    big.NewInt(cv.Round.Int64()),
-		Sequence: big.NewInt(cv.Sequence.Int64()),
-	}
-
-	views[1] = &istanbul.View{
-		Round:    big.NewInt(cv.Round.Int64() + 1),
-		Sequence: big.NewInt(cv.Sequence.Int64()),
-	}
-	committees[1].CalcProposer(committees[0].GetProposer().Address(), views[1].Round.Uint64())
-
-	wg := sync.WaitGroup{}
 	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func(index int) {
-			proposer := committees[index].GetProposer()
-			committee := committees[index].SubListWithProposer(prevHash, proposer.Address(), views[index])
+		//wg.Add(1)
+		go func(index int, valSet istanbul.ValidatorSet, round int64, seq int64) {
+			v := valSet
+
+			view := &istanbul.View{
+				Round:    big.NewInt(round),
+				Sequence: big.NewInt(seq),
+			}
+			if index == 1 {
+				view.Round = big.NewInt(round + 1)
+				v = valSet.Copy()
+				v.CalcProposer(v.GetProposer().Address(), view.Round.Uint64())
+			}
+			committee := v.SubListWithProposer(prevHash, v.GetProposer().Address(), view)
+			//var count int
 			for _, val := range committee {
 				if val.Address() != sb.Address() {
-					targetsMu.Lock()
-					targets[val.Address()] = true
-					targetsMu.Unlock()
+					//targetsMu.Lock()
+					//targets[val.Address()] = true
+					//targetsMu.Unlock()
+					update <- val.Address()
+					//count ++
 				}
 			}
-			wg.Done()
-		}(i)
+			//wg.Done()
+			done <- struct{}{}
+		}(i, valSet, cv.Round.Int64(), cv.Sequence.Int64())
 	}
-	wg.Wait()
+	//wg.Wait()
+
+	doneCount := 0
+EXIT:
+	for {
+		select {
+		case addr := <-update:
+			targets[addr] = true
+		case <-done:
+			doneCount++
+		default:
+			if doneCount == 2 {
+				break EXIT
+			}
+		}
+	}
 	return targets
 }
 
