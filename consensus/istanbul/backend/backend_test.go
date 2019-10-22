@@ -670,7 +670,7 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 	return governance.NewGovernance(config, dbm)
 }
 
-func Benchmark_GossipSubPeerTargets(b *testing.B) {
+func Benchmark_getTargetReceivers(b *testing.B) {
 	// Create ValidatorSet
 	council := getTestCouncil()
 	rewards := getTestRewards()
@@ -705,19 +705,14 @@ func Benchmark_GossipSubPeerTargets(b *testing.B) {
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 
-	// Test for blocks from 0 to maxBlockNum
-	for i := int64(0); i < maxBlockNum; i++ {
-		// Test for round 0 to round 14
-		for round := int64(0); round < 15; round++ {
-			backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(round)})
-			valSet.SetBlockNum(uint64(i))
-			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
+	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(0)})
+	valSet.SetBlockNum(uint64(1))
+	valSet.CalcProposer(valSet.GetProposer().Address(), uint64(1))
+	hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", 1)
+	prevHash := common.HexToHash(hex)
 
-			// Use block number as prevHash. In SubList() only left 15 bytes are being used.
-			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
-			prevHash := common.HexToHash(hex)
-			_ = backend.GossipSubPeer(prevHash, valSet, nil)
-		}
+	for i := 0; i < b.N; i++ {
+		_ = backend.getTargetReceivers(prevHash, valSet)
 	}
 }
 
