@@ -130,6 +130,9 @@ type backend struct {
 
 	// Node type
 	nodetype p2p.ConnType
+
+	targets   map[common.Address]bool
+	targetsMu sync.Mutex
 }
 
 func (sb *backend) NodeType() p2p.ConnType {
@@ -238,8 +241,8 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		return nil
 	}
 
-	targets := make(map[common.Address]bool)
-	update := make(chan common.Address, 50)
+	sb.targets = make(map[common.Address]bool)
+	update := make(chan common.Address, 100)
 	done := make(chan struct{}, 2)
 
 	selfAddr := sb.Address()
@@ -247,14 +250,14 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	seq := cv.Sequence.Int64()
 	doneCount := 0
 
-	go getCommittee(nextRound, valSet, round, seq, prevHash, selfAddr, update, done)
-	getCommittee(currentRound, valSet, round, seq, prevHash, selfAddr, update, done)
+	go sb.getCommittee(nextRound, valSet, round, seq, prevHash, selfAddr, update, done)
+	sb.getCommittee(currentRound, valSet, round, seq, prevHash, selfAddr, update, done)
 
 EXIT:
 	for {
 		select {
-		case addr := <-update:
-			targets[addr] = true
+		//case addr := <-update:
+		//sb.targets[addr] = true
 		case <-done:
 			doneCount++
 		default:
@@ -263,10 +266,10 @@ EXIT:
 			}
 		}
 	}
-	return targets
+	return sb.targets
 }
 
-func getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
+func (sb *backend) getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
 	v := valSet
 
 	view := &istanbul.View{
@@ -275,18 +278,20 @@ func getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int6
 	}
 
 	var proposer istanbul.Validator
-	if index == 1 {
+	if index == nextRound {
 		view.Round = big.NewInt(round + 1)
-		proposer = v.Selector(v, common.Address{}, uint64(round))
+		proposer = v.Selector(v, common.Address{}, uint64(round+1))
 	} else {
 		proposer = v.GetProposer()
 	}
-
 	committee := v.SubListWithProposer(prevHash, proposer.Address(), view)
-	//var count int
+
 	for _, val := range committee {
 		if val.Address() != self {
-			update <- val.Address()
+			sb.targetsMu.Lock()
+			sb.targets[val.Address()] = true
+			sb.targetsMu.Unlock()
+			//update <- val.Address()
 		}
 	}
 	done <- struct{}{}
