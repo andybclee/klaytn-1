@@ -46,7 +46,9 @@ import (
 
 const (
 	// fetcherID is the ID indicates the block is from Istanbul engine
-	fetcherID = "istanbul"
+	fetcherID    = "istanbul"
+	currentRound = 0
+	nextRound    = 1
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
@@ -237,44 +239,17 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 	}
 
 	targets := make(map[common.Address]bool)
-	//targetsMu := sync.RWMutex{}
-
-	//wg := sync.WaitGroup{}
-	update := make(chan common.Address, 100)
+	update := make(chan common.Address, 50)
 	done := make(chan struct{}, 2)
 
-	for i := 0; i < 2; i++ {
-		//wg.Add(1)
-		go func(index int, valSet istanbul.ValidatorSet, round int64, seq int64) {
-			v := valSet
-
-			view := &istanbul.View{
-				Round:    big.NewInt(round),
-				Sequence: big.NewInt(seq),
-			}
-			if index == 1 {
-				view.Round = big.NewInt(round + 1)
-				v = valSet.Copy()
-				v.CalcProposer(v.GetProposer().Address(), view.Round.Uint64())
-			}
-			committee := v.SubListWithProposer(prevHash, v.GetProposer().Address(), view)
-			//var count int
-			for _, val := range committee {
-				if val.Address() != sb.Address() {
-					//targetsMu.Lock()
-					//targets[val.Address()] = true
-					//targetsMu.Unlock()
-					update <- val.Address()
-					//count ++
-				}
-			}
-			//wg.Done()
-			done <- struct{}{}
-		}(i, valSet, cv.Round.Int64(), cv.Sequence.Int64())
-	}
-	//wg.Wait()
-
+	selfAddr := sb.Address()
+	round := cv.Round.Int64()
+	seq := cv.Sequence.Int64()
 	doneCount := 0
+
+	go getCommittee(nextRound, valSet, round, seq, prevHash, selfAddr, update, done)
+	getCommittee(currentRound, valSet, round, seq, prevHash, selfAddr, update, done)
+
 EXIT:
 	for {
 		select {
@@ -289,6 +264,32 @@ EXIT:
 		}
 	}
 	return targets
+}
+
+func getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
+	v := valSet
+
+	view := &istanbul.View{
+		Round:    big.NewInt(round),
+		Sequence: big.NewInt(seq),
+	}
+
+	var proposer istanbul.Validator
+	if index == 1 {
+		view.Round = big.NewInt(round + 1)
+		proposer = v.Selector(v, common.Address{}, uint64(round))
+	} else {
+		proposer = v.GetProposer()
+	}
+
+	committee := v.SubListWithProposer(prevHash, proposer.Address(), view)
+	//var count int
+	for _, val := range committee {
+		if val.Address() != self {
+			update <- val.Address()
+		}
+	}
+	done <- struct{}{}
 }
 
 // GossipSubPeer implements istanbul.Backend.Gossip
