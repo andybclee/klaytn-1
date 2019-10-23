@@ -235,13 +235,41 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
+	targets := make(map[common.Address]bool)
+
+	cv, ok := sb.currentView.Load().(*istanbul.View)
+	if !ok {
+		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
+		return nil
+	}
+	view := &istanbul.View{
+		Round:    big.NewInt(cv.Round.Int64()),
+		Sequence: big.NewInt(cv.Sequence.Int64()),
+	}
+
+	proposer := valSet.GetProposer()
+	for i := 0; i < 2; i++ {
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		for _, val := range committee {
+			if val.Address() != sb.Address() {
+				targets[val.Address()] = true
+			}
+		}
+		view.Round = view.Round.Add(view.Round, common.Big1)
+		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
+	}
+	return targets
+}
+
+// getTargetReceivers returns a map of nodes which need to receive a message
+func (sb *backend) getTargetReceivers2(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
 
-	sb.targets = make(map[common.Address]bool)
+	targets := make(map[common.Address]bool)
 	update := make(chan common.Address, 100)
 	done := make(chan struct{}, 2)
 
@@ -256,8 +284,8 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 EXIT:
 	for {
 		select {
-		//case addr := <-update:
-		//sb.targets[addr] = true
+		case addr := <-update:
+			targets[addr] = true
 		case <-done:
 			doneCount++
 		default:
@@ -266,7 +294,7 @@ EXIT:
 			}
 		}
 	}
-	return sb.targets
+	return targets
 }
 
 func (sb *backend) getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
@@ -288,10 +316,7 @@ func (sb *backend) getCommittee(index int, valSet istanbul.ValidatorSet, round i
 
 	for _, val := range committee {
 		if val.Address() != self {
-			sb.targetsMu.Lock()
-			sb.targets[val.Address()] = true
-			sb.targetsMu.Unlock()
-			//update <- val.Address()
+			update <- val.Address()
 		}
 	}
 	done <- struct{}{}
@@ -306,7 +331,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := sb.getTargetReceivers(prevHash, valSet)
+	targets := sb.getTargetReceivers2(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
