@@ -234,42 +234,42 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
-	targets := make(map[common.Address]bool)
-
-	cv, ok := sb.currentView.Load().(*istanbul.View)
-	if !ok {
-		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
-		return nil
-	}
-	view := &istanbul.View{
-		Round:    big.NewInt(cv.Round.Int64()),
-		Sequence: big.NewInt(cv.Sequence.Int64()),
-	}
-
-	proposer := valSet.GetProposer()
-	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
-		for _, val := range committee {
-			if val.Address() != sb.Address() {
-				targets[val.Address()] = true
-			}
-		}
-		view.Round = view.Round.Add(view.Round, common.Big1)
-		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
-	}
-	return targets
-}
+//func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
+//	targets := make(map[common.Address]bool)
+//
+//	cv, ok := sb.currentView.Load().(*istanbul.View)
+//	if !ok {
+//		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
+//		return nil
+//	}
+//	view := &istanbul.View{
+//		Round:    big.NewInt(cv.Round.Int64()),
+//		Sequence: big.NewInt(cv.Sequence.Int64()),
+//	}
+//
+//	proposer := valSet.GetProposer()
+//	for i := 0; i < 2; i++ {
+//		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+//		for _, val := range committee {
+//			if val.Address() != sb.Address() {
+//				targets[val.Address()] = true
+//			}
+//		}
+//		view.Round = view.Round.Add(view.Round, common.Big1)
+//		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
+//	}
+//	return targets
+//}
 
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers2(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
+func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
 
-	targets := make(map[common.Address]bool)
+	sb.targets = make(map[common.Address]bool)
 	update := make(chan common.Address, 100)
 	done := make(chan struct{}, 2)
 
@@ -278,6 +278,14 @@ func (sb *backend) getTargetReceivers2(prevHash common.Hash, valSet istanbul.Val
 	seq := cv.Sequence.Int64()
 	doneCount := 0
 
+	//wg := sync.WaitGroup{}
+	//wg.Add(1)
+	//go func() {
+	//	wg.Done()
+	//	return
+	//}()
+	//wg.Wait()
+
 	go sb.getCommittee(nextRound, valSet, round, seq, prevHash, selfAddr, update, done)
 	sb.getCommittee(currentRound, valSet, round, seq, prevHash, selfAddr, update, done)
 
@@ -285,7 +293,7 @@ EXIT:
 	for {
 		select {
 		case addr := <-update:
-			targets[addr] = true
+			sb.targets[addr] = true
 		case <-done:
 			doneCount++
 		default:
@@ -294,7 +302,7 @@ EXIT:
 			}
 		}
 	}
-	return targets
+	return sb.targets
 }
 
 func (sb *backend) getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
@@ -315,8 +323,12 @@ func (sb *backend) getCommittee(index int, valSet istanbul.ValidatorSet, round i
 	committee := v.SubListWithProposer(prevHash, proposer.Address(), view)
 
 	for _, val := range committee {
-		if val.Address() != self {
-			update <- val.Address()
+		addr := val.Address()
+		if addr != self {
+			//sb.targetsMu.Lock()
+			//sb.targets[addr] = true
+			//sb.targetsMu.Unlock()
+			update <- addr
 		}
 	}
 	done <- struct{}{}
@@ -331,7 +343,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := sb.getTargetReceivers2(prevHash, valSet)
+	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
